@@ -42,7 +42,7 @@ class Core(FileSystem, MappingSearch):
         return self.hash_password(user, password)
 
     def domain_input_query(self):
-        domain = input('Enter subdomain [default: atosglobaldev]')
+        domain = input('Enter subdomain [default: atosglobaldev]: ')
         if not domain:
             domain = 'atosglobaldev'
         return domain
@@ -103,11 +103,15 @@ class Core(FileSystem, MappingSearch):
 
         if command in ['quit', 'end', 'exit', 'q']:
             return False
-        if command in ['mapping', 'map']:
+        elif command in ['mapping', 'map']:
             self.run_mapping_sequence()
             return True
-        if command in ['man', 'help']:
+        elif command in ['man', 'help']:
             self.print_help_message()
+            return True
+        elif command in ['pass', 'password', 'credentials', 'user',
+                'update settings', 'update_settings', 'settings', 'domain']:
+            self.set_connection_settings()
             return True
         print("Unknown command, try 'help'.")
         return True
@@ -118,6 +122,7 @@ class Core(FileSystem, MappingSearch):
         update = {}
         update['domain'] = domain
         update['credentials'] = credentials
+        self.update_settings(update)
         self.test_connection()
         return
 

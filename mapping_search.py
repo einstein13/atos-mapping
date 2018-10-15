@@ -164,7 +164,7 @@ class MappingSearch(object):
         query += "&sysparm_limit=30"
         result = self.connect(self.mapping_block_table, query)
         if not result:
-            return False
+            return -1
         
         lines = result['result']
         if len(lines) == 1:
