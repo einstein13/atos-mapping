@@ -93,7 +93,9 @@ class Core(FileSystem, MappingSearch):
     def print_help_message(self):
         text = """This program accepts commands:
     * exit - terminates the program
-    * mapping - make mapping tree for everything"""
+    * mapping - make mapping tree for everything
+    * configure - change settings for password/url
+Aliases are configured in lines ~110 in core.py"""
         print(text)
         return
 
@@ -110,7 +112,8 @@ class Core(FileSystem, MappingSearch):
             self.print_help_message()
             return True
         elif command in ['pass', 'password', 'credentials', 'user',
-                'update settings', 'update_settings', 'settings', 'domain']:
+                'update settings', 'update_settings', 'settings', 'domain',
+                'configure']:
             self.set_connection_settings()
             return True
         print("Unknown command, try 'help'.")
