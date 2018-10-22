@@ -31,6 +31,7 @@ def indent(elem, level=0, more_sibs=False):
     else:
         if elem.text:
             elem.text = elem.text.replace("\n", i+ind*2)
+            elem.text = elem.text.replace("\r", "")
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
             if more_sibs:
@@ -99,6 +100,13 @@ class MappingSearch(object):
         query = "sysparm_query=u_name%3D" + block_name
         result = self.connect(self.mapping_block_table, query)
         if not result:
+            print("ERR (Retrieving block): wrong response")
+            return False
+        if not 'result' in list(result.keys()):
+            print("ERR (Retrieving block): no result")
+            return False
+        if len(result['result']) == 0:
+            print("ERR (Retrieving block): no block data")
             return False
         block = result['result'][0]
         return block
@@ -115,7 +123,8 @@ class MappingSearch(object):
             if 'u_value' in line_keys and line_data['u_value']:
                 included = SubElement(xml, "MappingBlock")
                 mapping_block_data = self.find_mapping_block(line_data['u_value'])
-                self.add_mapping_block_to_xml(included, mapping_block_data)
+                if mapping_block_data is not False:
+                    self.add_mapping_block_to_xml(included, mapping_block_data)
         if line_data['u_type'] == 'nextMap':
             if 'u_value' in line_keys and line_data['u_value']:
                 return line_data['u_value']
