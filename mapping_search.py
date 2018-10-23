@@ -6,7 +6,18 @@ except: # Pyton 2.7
     # from urllib import urlencode, quote
 from json import loads, dumps
 from xml.etree.ElementTree import Element, SubElement
-from xml.etree.ElementTree import tostring, dump       
+from xml.etree.ElementTree import tostring, dump
+try:
+    # Python 3.5+
+    from html import unescape
+except:
+    try:
+        # Python 3.4-
+        from html.parser import HTMLParser
+    except:
+        # Python 2.7
+        from HTMLParser import HTMLParser
+    unescape = HTMLParser().unescape
 
 def indent(elem, level=0, more_sibs=False):
     # based on https://stackoverflow.com/questions/749796/pretty-printing-xml-in-python
@@ -165,6 +176,7 @@ class MappingSearch(object):
 
         indent(basic_mapping)
         string = tostring(basic_mapping).decode("UTF-8")
+        string = unescape(string)
         return string
 
     def one_block_search(self, block_name):
