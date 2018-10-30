@@ -5,6 +5,7 @@ except: # Pyton 2.7
     from urllib2 import Request, urlopen
     # from urllib import urlencode, quote
 from json import loads, dumps
+from re import compile as comp
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree.ElementTree import tostring, dump
 try:
@@ -53,6 +54,8 @@ class MappingSearch(object):
 
     mapping_block_table = "u_sr_mapping_block"
     mapping_line_table = "u_sr_mapping_line"
+
+    used_mapping_blocks = []
 
     def connect(self, table, query=None):
         url = self.settings['domain'] + "/api/now/table/" + table
@@ -122,6 +125,16 @@ class MappingSearch(object):
         block = result['result'][0]
         return block
 
+    def mapping_block_names_search(self, script):
+        pattern = "\s*return \"(.*)\";"
+        regex = comp(pattern)
+        results = []
+        for line in script.split("\n"):
+            match = regex.match(line)
+            if match:
+                results.append(match.group(1))
+        return results
+
     def add_mapping_lines_to_xml(self, xml, line_data):
         valid_keys = [["u_output_parm", "TargetParam"], ["u_type", "Type"],
                 ["u_order", "Order"], ["u_value", "Value"],
@@ -136,6 +149,13 @@ class MappingSearch(object):
                 mapping_block_data = self.find_mapping_block(line_data['u_value'])
                 if mapping_block_data is not False:
                     self.add_mapping_block_to_xml(included, mapping_block_data)
+            if 'u_script' in line_keys and line_data['u_script']:
+                blocks = self.mapping_block_names_search(line_data['u_script'])
+                for name in blocks:
+                    included = SubElement(xml, "MappingBlock")
+                    mapping_block_data = self.find_mapping_block(name)
+                    if mapping_block_data is not False:
+                        self.add_mapping_block_to_xml(included, mapping_block_data)
         if line_data['u_type'] == 'nextMap':
             if 'u_value' in line_keys and line_data['u_value']:
                 return line_data['u_value']
@@ -161,9 +181,23 @@ class MappingSearch(object):
                 self.add_key_value_to_xml(xml, key[1], block_data[key[0]])
         lines = self.add_key_value_to_xml(xml, 'MappingLines')
         next_map = self.add_lines_to_block_xml(lines, block_data)
+        if 'u_name' in block_keys and block_data['u_name']:
+            self.used_mapping_blocks.append(block_data['u_name'])
+        self.used_mapping_blocks
+
         return next_map
 
+    def check_mapping_blocks_duplicates(self):
+        used_blocks = self.used_mapping_blocks
+        if len(set(used_blocks)) == len(used_blocks):
+            return
+        for block_name in set(used_blocks):
+            if used_blocks.count(block_name) > 1:
+                print("WARNING: duplicate include of \"%s\"" % (block_name,))
+        return
+
     def find_full_xml(self, block_data):
+        self.used_mapping_blocks = []
         basic_mapping = Element("mapping")
         
         mapping_block_data = block_data
@@ -173,6 +207,8 @@ class MappingSearch(object):
             mapping_block_data = {}
             if next_map:
                 mapping_block_data = self.find_mapping_block(next_map)
+
+        self.check_mapping_blocks_duplicates()
 
         indent(basic_mapping)
         string = tostring(basic_mapping).decode("UTF-8")
