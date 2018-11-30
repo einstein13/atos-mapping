@@ -126,7 +126,7 @@ class MappingSearch(object):
         return block
 
     def mapping_block_names_search(self, script):
-        pattern = "\s*return \"(.*)\";"
+        pattern = "\s*return [\"'](.*)[\"'];"
         regex = comp(pattern)
         results = []
         for line in script.split("\n"):
@@ -158,8 +158,11 @@ class MappingSearch(object):
                         self.add_mapping_block_to_xml(included, mapping_block_data)
         if line_data['u_type'] == 'nextMap':
             if 'u_value' in line_keys and line_data['u_value']:
-                return line_data['u_value']
-        return ''
+                return [line_data['u_value']]
+            if 'u_script' in line_keys and line_data['u_script']:
+                blocks = self.mapping_block_names_search(line_data['u_script'])
+                return blocks
+        return []
 
     def add_lines_to_block_xml(self, xml, block_data):
         lines = self.find_mapping_lines(block_data)
@@ -167,10 +170,10 @@ class MappingSearch(object):
             return False
         for line_data in lines:
             line_xml = SubElement(xml, "Line")
-            next_map = self.add_mapping_lines_to_xml(line_xml, line_data)
-            if next_map:
-                return next_map
-        return ''
+            next_maps = self.add_mapping_lines_to_xml(line_xml, line_data)
+            if len(next_maps) > 0:
+                return next_maps
+        return []
 
     def add_mapping_block_to_xml(self, xml, block_data):
         valid_keys = [['u_name', 'Name'], ['u_phase', 'Phase'],
@@ -180,12 +183,12 @@ class MappingSearch(object):
             if key[0] in block_keys and block_data[key[0]]:
                 self.add_key_value_to_xml(xml, key[1], block_data[key[0]])
         lines = self.add_key_value_to_xml(xml, 'MappingLines')
-        next_map = self.add_lines_to_block_xml(lines, block_data)
+        next_maps = self.add_lines_to_block_xml(lines, block_data)
         if 'u_name' in block_keys and block_data['u_name']:
             self.used_mapping_blocks.append(block_data['u_name'])
         self.used_mapping_blocks
 
-        return next_map
+        return next_maps
 
     def check_mapping_blocks_duplicates(self):
         used_blocks = self.used_mapping_blocks
@@ -200,13 +203,13 @@ class MappingSearch(object):
         self.used_mapping_blocks = []
         basic_mapping = Element("mapping")
         
-        mapping_block_data = block_data
-        while mapping_block_data:
+        mapping_block_data = [block_data]
+        while len(mapping_block_data) > 0:
             block_xml = SubElement(basic_mapping, "MappingBlock")
-            next_map = self.add_mapping_block_to_xml(block_xml, mapping_block_data)
-            mapping_block_data = {}
-            if next_map:
-                mapping_block_data = self.find_mapping_block(next_map)
+            next_maps = self.add_mapping_block_to_xml(block_xml, mapping_block_data[0])
+            mapping_block_data.pop(0)
+            for one_map in next_maps:
+                mapping_block_data.append(self.find_mapping_block(one_map))
 
         self.check_mapping_blocks_duplicates()
 
